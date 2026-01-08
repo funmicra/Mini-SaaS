@@ -1,0 +1,5 @@
+---
+# Placeholder if you want to restart networking, not strictly required
+- name: Reload sysctl
+  sysctl:
+    reload: yes

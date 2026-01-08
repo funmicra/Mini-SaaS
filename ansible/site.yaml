@@ -1,0 +1,17 @@
+- hosts: proxy
+  serial: 1
+  become: true
+  roles:
+    - common
+    - set_hostname
+    - nat
+    - nat_firewall
+  tags: proxy
+
+- hosts: private
+  become: true
+  roles:
+    - apt
+    - set_hostname
+    - nat_firewall
+  tags: private

@@ -1,0 +1,9 @@
+---
+# Public interface of the NAT node (public Linode)
+nat_public_iface: eth0
+
+# Private interface (VPC)
+nat_private_iface: eth1
+
+# Private subnet to NAT
+private_subnet_cidr: "192.168.33.0/24"

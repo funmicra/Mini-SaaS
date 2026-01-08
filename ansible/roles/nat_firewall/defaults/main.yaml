@@ -1,0 +1,12 @@
+---
+# Public NAT node
+firewall_public_allowed_ssh_cidrs:
+  - "0.0.0.0/0"  # change to your office/home IPs in production
+firewall_public_allowed_ports:
+  - 22   # SSH
+  - 80   # HTTP (optional)
+  - 443  # HTTPS (optional)
+
+# Private nodes
+firewall_private_allowed_ports:
+  - 22   # SSH (optional, maybe only from proxy)

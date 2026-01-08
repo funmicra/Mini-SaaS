@@ -1,0 +1,43 @@
+---
+- name: Enable IP forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    reload: yes
+
+- name: Configure NAT for private subnet
+  iptables:
+    table: nat
+    chain: POSTROUTING
+    source: "{{ private_subnet_cidr }}"
+    out_interface: "{{ nat_public_iface }}"
+    jump: MASQUERADE
+    comment: "NAT for private subnet"
+    state: present
+
+- name: Allow forwarding from private subnet
+  iptables:
+    table: filter
+    chain: FORWARD
+    in_interface: "{{ nat_private_iface }}"
+    out_interface: "{{ nat_public_iface }}"
+    jump: ACCEPT
+    comment: "Allow forwarding from private to public"
+    state: present
+
+- name: Allow return traffic
+  iptables:
+    table: filter
+    chain: FORWARD
+    in_interface: "{{ nat_public_iface }}"
+    out_interface: "{{ nat_private_iface }}"
+    match: state
+    ctstate: ESTABLISHED,RELATED
+    jump: ACCEPT
+    comment: "Allow return traffic"
+    state: present
+
+- name: Persist iptables rules
+  command: netfilter-persistent save
+  become: true
