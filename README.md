@@ -19,7 +19,6 @@ Target Architecture
 - IaC: Terraform
 
 - Config: Ansible
-
 ---
 
 # Linode Layout (Realistic, Resume-Friendly)
