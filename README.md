@@ -21,6 +21,7 @@ Target Architecture
 - Config: Ansible
 ---
 
+
 # Linode Layout (Realistic, Resume-Friendly)
 
 1. Linode 1 – Edge / App Node
