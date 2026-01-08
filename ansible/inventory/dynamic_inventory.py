@@ -8,7 +8,7 @@ from pathlib import Path
 # Configuration
 # ------------------------------------------------------------------
 
-ANSIBLE_USER = "funmicra"
+ANSIBLE_USER = "ansible"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TF_DIR = (SCRIPT_DIR / "../../terraform").resolve()
