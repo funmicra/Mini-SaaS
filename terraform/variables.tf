@@ -9,14 +9,6 @@ variable "region" {
   default = "de-fra-2"
 }
 
-variable "proxy_stackscript_id" {
-  default = 1975956
-}
-
-variable "private_stackscript_id" {
-  default = 1975967
-}
-
 variable "username" {
   type      = string
   sensitive = true

@@ -20,13 +20,9 @@ resource "linode_instance" "proxy" {
   region = var.region
   type   = "g6-nanode-1"
   image  = "linode/ubuntu24.04"
+  user_data = file(terraform/cloud-config.yaml")
+}
 
-  stackscript_id   = var.proxy_stackscript_id
- # stackscript_data = {
- #   username = var.username
- #   user_password  = var.user_password
- #   ssh_key_b64 = file("ssh_key.b64")
- # }
 
   # Public interface
   interface {
@@ -95,13 +91,8 @@ resource "linode_instance" "private" {
   region = var.region
   type   = "g6-standard-1"
   image  = "linode/ubuntu24.04"
+  user_data = file(terraform/cloud-config.yaml")
 
-  stackscript_id   = var.private_stackscript_id
- # stackscript_data = {
- #   username = var.username
- #   user_password  = var.user_password
- #   ssh_key_b64 = file("ssh_key.b64")
- # }
 
   interface {
     purpose   = "vpc"
