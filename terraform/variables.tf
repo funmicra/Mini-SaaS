@@ -22,3 +22,13 @@ variable "user_password" {
   type      = string
   sensitive = true
 }
+
+variable "ssh_pubkey_path" {
+  description = "Path to the public SSH key for Ansible"
+  default     = "terraform/ansible.pub"
+}
+
+variable "ansible_email" {
+  description = "Email for the Ansible user"
+  default     = "el.funmicra@gmail.com"
+}

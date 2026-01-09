@@ -16,26 +16,35 @@ resource "linode_vpc_subnet" "private" {
 # Proxy Linode
 # ------------------------
 resource "linode_instance" "proxy" {
-  label  = "proxy-node"
+  label  = "vpc-forward-proxy"
   region = var.region
   type   = "g6-nanode-1"
   image  = "linode/ubuntu24.04"
 
-  private_ip = "192.168.33.250"
-  ipv4       = true
-  vpc_id     = linode_vpc.private.id
-}
+  # Public IP is automatic
+  private_ip = false
 
-# Passwordless Ansible user on Proxy
-resource "linode_user" "ansible_proxy" {
-  username   = "ansible"
-  restricted = false
-  ssh_keys   = [file("terraform/ssh_key.b64")]
-  linode_id  = linode_instance.proxy.id
+  # Attach to VPC
+  network_interface {
+    purpose   = "vpc"
+    subnet_id = linode_vpc_subnet.private.id
+    ipv4      = "192.168.33.250"
+  }
 }
 
 # ------------------------
-# Private Linodes
+# Passwordless user for Ansible (proxy)
+# ------------------------
+resource "linode_user" "ansible_proxy" {
+  username = "ansible"
+  email    = var.ansible_email
+  ssh_keys = [file(var.ssh_pubkey_path)]
+  restricted = false
+  linode_id = linode_instance.proxy.id
+}
+
+# ------------------------
+# Private workload Linodes
 # ------------------------
 resource "linode_instance" "private" {
   count  = var.private_count
@@ -44,24 +53,30 @@ resource "linode_instance" "private" {
   type   = "g6-standard-1"
   image  = "linode/ubuntu24.04"
 
-  private_ip = "192.168.33.${10 + count.index}"
-  vpc_id     = linode_vpc.private.id
-}
-
-# Passwordless Ansible user on Private nodes
-resource "linode_user" "ansible_private" {
-  count      = var.private_count
-  username   = "ansible"
-  restricted = false
-  ssh_keys   = [file("terraform/ssh_key.b64")]
-  linode_id  = linode_instance.private[count.index].id
+  network_interface {
+    purpose   = "vpc"
+    subnet_id = linode_vpc_subnet.private.id
+    ipv4      = "192.168.33.${10 + count.index}"
+  }
 }
 
 # ------------------------
-# Firewall — Proxy Node
+# Passwordless user for Ansible (private)
+# ------------------------
+resource "linode_user" "ansible_private" {
+  count     = var.private_count
+  username  = "ansible"
+  email     = var.ansible_email
+  ssh_keys  = [file(var.ssh_pubkey_path)]
+  restricted = false
+  linode_id = linode_instance.private[count.index].id
+}
+
+# ------------------------
+# Proxy Firewall
 # ------------------------
 resource "linode_firewall" "proxy_fw" {
-  label = "fw-proxy"
+  label = "fw-proxy-edge"
 
   inbound {
     label    = "allow-ssh"
@@ -94,10 +109,10 @@ resource "linode_firewall" "proxy_fw" {
 }
 
 # ------------------------
-# Firewall — Private Nodes
+# Private Firewall
 # ------------------------
 resource "linode_firewall" "private_fw" {
-  label = "fw-private"
+  label = "fw-private-workloads"
 
   inbound {
     label    = "allow-ssh-from-proxy"
