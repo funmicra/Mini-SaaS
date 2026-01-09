@@ -1,5 +1,5 @@
 # ------------------------
-# VPC and Subnet
+# VPC
 # ------------------------
 resource "linode_vpc" "private" {
   label  = "private-vpc"
@@ -16,35 +16,52 @@ resource "linode_vpc_subnet" "private" {
 # Proxy Linode
 # ------------------------
 resource "linode_instance" "proxy" {
-  label  = "vpc-forward-proxy"
+  label  = "proxy-node"
   region = var.region
   type   = "g6-nanode-1"
   image  = "linode/ubuntu24.04"
-  user_data = file(terraform/cloud-config.yaml)
 
-  # Public interface
-  interface {
-    purpose = "public"
-  }
+  private_ip = "192.168.33.250"
+  ipv4       = true
+  vpc_id     = linode_vpc.private.id
+}
 
-  # VPC interface with fixed IP
-  interface {
-    purpose = "vpc"
-    subnet_id = linode_vpc_subnet.private.id
-    
-    ipv4 {
-        vpc = "192.168.33.250"
-    }
-  }
+# Passwordless Ansible user on Proxy
+resource "linode_user" "ansible_proxy" {
+  username   = "ansible"
+  restricted = false
+  ssh_keys   = [file("terraform/ssh_key.b64")]
+  linode_id  = linode_instance.proxy.id
+}
 
-  tags = ["gateway", "vpc", "edge"]
+# ------------------------
+# Private Linodes
+# ------------------------
+resource "linode_instance" "private" {
+  count  = var.private_count
+  label  = "private-${count.index}"
+  region = var.region
+  type   = "g6-standard-1"
+  image  = "linode/ubuntu24.04"
+
+  private_ip = "192.168.33.${10 + count.index}"
+  vpc_id     = linode_vpc.private.id
+}
+
+# Passwordless Ansible user on Private nodes
+resource "linode_user" "ansible_private" {
+  count      = var.private_count
+  username   = "ansible"
+  restricted = false
+  ssh_keys   = [file("terraform/ssh_key.b64")]
+  linode_id  = linode_instance.private[count.index].id
 }
 
 # ------------------------
 # Firewall — Proxy Node
 # ------------------------
 resource "linode_firewall" "proxy_fw" {
-  label = "fw-proxy-edge"
+  label = "fw-proxy"
 
   inbound {
     label    = "allow-ssh"
@@ -73,43 +90,14 @@ resource "linode_firewall" "proxy_fw" {
   inbound_policy  = "DROP"
   outbound_policy = "ACCEPT"
 
-  linodes = [
-    linode_instance.proxy.id
-  ]
+  linodes = [linode_instance.proxy.id]
 }
-
-
-
-# ------------------------
-# Private Linodes
-# ------------------------
-resource "linode_instance" "private" {
-  count  = var.private_count
-  label  = "private-${count.index}"
-  region = var.region
-  type   = "g6-standard-1"
-  image  = "linode/ubuntu24.04"
-  user_data = file(terraform/cloud-config.yaml)
-
-
-  interface {
-    purpose   = "vpc"
-    subnet_id = linode_vpc_subnet.private.id
-
-    ipv4 {
-      vpc = "192.168.33.${10 + count.index}"
-    }
-  }
-
-  tags = ["private", "workload"]
-}
-
 
 # ------------------------
 # Firewall — Private Nodes
 # ------------------------
 resource "linode_firewall" "private_fw" {
-  label = "fw-private-workloads"
+  label = "fw-private"
 
   inbound {
     label    = "allow-ssh-from-proxy"
@@ -130,10 +118,5 @@ resource "linode_firewall" "private_fw" {
   inbound_policy  = "DROP"
   outbound_policy = "ACCEPT"
 
-  linodes = [
-    for vm in linode_instance.private : vm.id
-  ]
+  linodes = [for vm in linode_instance.private : vm.id]
 }
-
-
-
