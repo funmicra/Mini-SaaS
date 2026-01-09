@@ -21,8 +21,6 @@ resource "linode_instance" "proxy" {
   type   = "g6-nanode-1"
   image  = "linode/ubuntu24.04"
   user_data = file(terraform/cloud-config.yaml)
-}
-
 
   # Public interface
   interface {
