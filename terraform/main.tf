@@ -20,7 +20,7 @@ resource "linode_instance" "proxy" {
   region = var.region
   type   = "g6-nanode-1"
   image  = "linode/ubuntu24.04"
-  user_data = file(terraform/cloud-config.yaml")
+  user_data = file(terraform/cloud-config.yaml)
 }
 
 
@@ -91,7 +91,7 @@ resource "linode_instance" "private" {
   region = var.region
   type   = "g6-standard-1"
   image  = "linode/ubuntu24.04"
-  user_data = file(terraform/cloud-config.yaml")
+  user_data = file(terraform/cloud-config.yaml)
 
 
   interface {
