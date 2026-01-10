@@ -12,14 +12,20 @@ TERRAFORM_DIR = "terraform"
 # ------------------------------------------------------------------
 
 def require_env(var):
-    if not os.environ.get(var):
-        print(f"[ERROR] Required env var missing: {var}")
+    value = os.environ.get(var)
+    if not value:
+        print(f"[ERROR] Required environment variable missing: {var}")
         sys.exit(1)
+    return value
 
 def tf_output(args):
+    """
+    Run terraform output with AWS credentials from environment.
+    """
+    env = os.environ.copy()
     cmd = ["terraform", f"-chdir={TERRAFORM_DIR}", "output"] + args
     try:
-        return subprocess.check_output(cmd, text=True).strip()
+        return subprocess.check_output(cmd, text=True, env=env).strip()
     except subprocess.CalledProcessError:
         print(f"[ERROR] Terraform command failed: {' '.join(cmd)}")
         sys.exit(1)
@@ -29,11 +35,13 @@ def tf_output(args):
 # ------------------------------------------------------------------
 
 def main():
-    # Validate AWS credentials (needed for Terraform)
-    require_env("AWS_ACCESS_KEY_ID")
-    require_env("AWS_SECRET_ACCESS_KEY")
+    # Validate Jenkins-injected AWS credentials
+    aws_access_key = require_env("AWS_ACCESS_KEY_ID")
+    aws_secret_key = require_env("AWS_SECRET_ACCESS_KEY")
 
-    # Read outputs
+    print(f"[INFO] Using AWS_ACCESS_KEY_ID={aws_access_key[:4]}*** (masked)")
+
+    # Read Terraform outputs
     instance_ids_raw = tf_output(["-json", "instance_ids"])
     proxy_id = tf_output(["-raw", "proxy_id"])
     vpc_id = tf_output(["-raw", "vpc_id"])
