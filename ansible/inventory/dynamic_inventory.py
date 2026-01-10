@@ -8,7 +8,7 @@ from pathlib import Path
 # Configuration
 # ------------------------------------------------------------------
 
-ANSIBLE_USER = "ansible"
+ANSIBLE_USER = "ansible"  # matches cloud-init automation user
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TF_DIR = (SCRIPT_DIR / "../../terraform").resolve()
@@ -40,9 +40,7 @@ def tf_output(name, json_output=False):
     return json.loads(out) if json_output else out
 
 def normalize_ip(value):
-    """
-    Ensure the IP is a clean string with no quotes or whitespace.
-    """
+    """Ensure the IP is a clean string with no quotes or whitespace."""
     if not value:
         return ""
     return str(value).strip().strip('"').strip("'")
@@ -56,38 +54,33 @@ def main():
         print(f"[ERROR] Terraform directory not found: {TF_DIR}", file=sys.stderr)
         sys.exit(1)
 
-    proxy_ip_raw = tf_output("proxy_public_ip")
-    private_ips_raw = tf_output("private_ips", json_output=True)
+    # Fetch Terraform outputs
+    frontend_ip = normalize_ip(tf_output("frontend_public_ip"))
+    backend_ip = normalize_ip(tf_output("backend_private_ip"))
 
-    proxy_ip = normalize_ip(proxy_ip_raw)
-
-    if not proxy_ip:
-        print("[ERROR] proxy_public_ip is empty", file=sys.stderr)
+    if not frontend_ip:
+        print("[ERROR] frontend_public_ip is empty", file=sys.stderr)
         sys.exit(1)
 
-    if not isinstance(private_ips_raw, list) or not private_ips_raw:
-        print("[ERROR] private_ips must be a non-empty list", file=sys.stderr)
+    if not backend_ip:
+        print("[ERROR] backend_private_ip is empty", file=sys.stderr)
         sys.exit(1)
 
-    private_ips = [normalize_ip(ip) for ip in private_ips_raw if normalize_ip(ip)]
-
-    if not private_ips:
-        print("[ERROR] private_ips resolved to empty after normalization", file=sys.stderr)
-        sys.exit(1)
-
+    # Build inventory
     inventory = [
-        "[proxy]",
-        proxy_ip,
+        "[frontend]",
+        frontend_ip,
         "",
-        "[proxy:vars]",
+        "[frontend:vars]",
         f"ansible_user={ANSIBLE_USER}",
         "",
-        "[private]",
-        *private_ips,
+        "[backend]",
+        backend_ip,
         "",
-        "[private:vars]",
+        "[backend:vars]",
         f"ansible_user={ANSIBLE_USER}",
-        f"ansible_ssh_common_args=-o ProxyJump={ANSIBLE_USER}@{proxy_ip} -o ForwardAgent=yes -o StrictHostKeyChecking=no",
+        f"ansible_ssh_common_args=-o ProxyJump={ANSIBLE_USER}@{frontend_ip} "
+        "-o ForwardAgent=yes -o StrictHostKeyChecking=no",
         "",
     ]
 

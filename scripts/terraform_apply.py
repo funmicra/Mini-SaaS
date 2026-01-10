@@ -24,10 +24,8 @@ def require_env(var):
 def main():
     # Validate required Terraform variables
     required_envs = [
-        "TF_VAR_linode_token",
-        "TF_VAR_ssh_keys_file",
-        "TF_VAR_user_password",
-        "TF_VAR_username",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
     ]
 
     for env in required_envs:

@@ -1,137 +1,214 @@
-# ------------------------
-# VPC
-# ------------------------
-resource "linode_vpc" "private" {
-  label  = "private-vpc"
-  region = var.region
+# ======================
+# Provider
+# ======================
+provider "aws" {
+  region  = "eu-central-1" # change to your region
+  profile = "deploy"
 }
 
-resource "linode_vpc_subnet" "private" {
-  label  = "private-subnet"
-  vpc_id = linode_vpc.private.id
-  ipv4   = "192.168.33.0/24"
+# ======================
+# Variables
+# ======================
+variable "instance_type" {
+  default = "t3.micro"
 }
 
-# ------------------------
-# Proxy Linode
-# ------------------------
-resource "linode_instance" "proxy" {
-  label  = "vpc-forward-proxy"
-  region = var.region
-  type   = "g6-nanode-1"
-  image  = "linode/ubuntu24.04"
+variable "ssh_key_name" {
+  default = "mini-saas-key" # your imported RSA key
+}
 
-  # Public IP is automatic
-  private_ip = false
+variable "automation_pubkey" {
+  default = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFX4JO+5+o85gZSKnFY1QfL8XaQRYANL6L/l6PDl4jRs funmicra@Titanas"
+}
 
-  # Attach to VPC
-  network_interface {
-    purpose   = "vpc"
-    subnet_id = linode_vpc_subnet.private.id
-    ipv4      = "192.168.33.250"
+# ======================
+# Data source for latest Ubuntu AMIs
+# ======================
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
 }
 
-# ------------------------
-# Passwordless user for Ansible (proxy)
-# ------------------------
-resource "linode_user" "ansible_proxy" {
-  username = "ansible"
-  email    = var.ansible_email
-  ssh_keys = [file(var.ssh_pubkey_path)]
-  restricted = false
-  linode_id = linode_instance.proxy.id
+# ======================
+# VPC & Subnets
+# ======================
+resource "aws_vpc" "mini_saas_vpc" {
+  cidr_block           = "192.168.33.0/24"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags                 = { Name = "mini-saas-vpc" }
 }
 
-# ------------------------
-# Private workload Linodes
-# ------------------------
-resource "linode_instance" "private" {
-  count  = var.private_count
-  label  = "private-${count.index}"
-  region = var.region
-  type   = "g6-standard-1"
-  image  = "linode/ubuntu24.04"
+resource "aws_subnet" "private_subnet" {
+  vpc_id                  = aws_vpc.mini_saas_vpc.id
+  cidr_block              = "192.168.33.0/25"
+  map_public_ip_on_launch = false
+  availability_zone       = "eu-central-1a"
+  tags                    = { Name = "mini-saas-private" }
+}
 
-  network_interface {
-    purpose   = "vpc"
-    subnet_id = linode_vpc_subnet.private.id
-    ipv4      = "192.168.33.${10 + count.index}"
+resource "aws_subnet" "public_subnet" {
+  vpc_id                  = aws_vpc.mini_saas_vpc.id
+  cidr_block              = "192.168.33.128/25"
+  map_public_ip_on_launch = true
+  availability_zone       = "eu-central-1a"
+  tags                    = { Name = "mini-saas-public" }
+}
+
+# Internet Gateway
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.mini_saas_vpc.id
+  tags   = { Name = "mini-saas-igw" }
+}
+
+# ======================
+# Public Route Table
+# ======================
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.mini_saas_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = { Name = "mini-saas-public-rt" }
+}
+
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+# ======================
+# NAT Gateway for Private Subnet
+# ======================
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+  tags   = { Name = "mini-saas-nat-eip" }
+}
+
+resource "aws_nat_gateway" "nat_gw" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_subnet.id
+  tags          = { Name = "mini-saas-nat" }
+  depends_on    = [aws_internet_gateway.igw]
+}
+
+# Private Route Table
+resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.mini_saas_vpc.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_gw.id
+  }
+
+  tags = { Name = "mini-saas-private-rt" }
+}
+
+resource "aws_route_table_association" "private_assoc" {
+  subnet_id      = aws_subnet.private_subnet.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
+# ======================
+# Security Groups
+# ======================
+resource "aws_security_group" "frontend_sg" {
+  name        = "frontend-sg"
+  description = "Allow SSH and HTTP from anywhere"
+  vpc_id      = aws_vpc.mini_saas_vpc.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-# ------------------------
-# Passwordless user for Ansible (private)
-# ------------------------
-resource "linode_user" "ansible_private" {
-  count     = var.private_count
-  username  = "ansible"
-  email     = var.ansible_email
-  ssh_keys  = [file(var.ssh_pubkey_path)]
-  restricted = false
-  linode_id = linode_instance.private[count.index].id
+resource "aws_security_group" "backend_sg" {
+  name        = "backend-sg"
+  description = "Allow only frontend subnet access"
+  vpc_id      = aws_vpc.mini_saas_vpc.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["192.168.33.128/25"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-# ------------------------
-# Proxy Firewall
-# ------------------------
-resource "linode_firewall" "proxy_fw" {
-  label = "fw-proxy-edge"
-
-  inbound {
-    label    = "allow-ssh"
-    action   = "ACCEPT"
-    protocol = "TCP"
-    ports    = "22"
-    ipv4     = ["0.0.0.0/0"]
-  }
-
-  inbound {
-    label    = "allow-http"
-    action   = "ACCEPT"
-    protocol = "TCP"
-    ports    = "80"
-    ipv4     = ["0.0.0.0/0"]
-  }
-
-  inbound {
-    label    = "allow-https"
-    action   = "ACCEPT"
-    protocol = "TCP"
-    ports    = "443"
-    ipv4     = ["0.0.0.0/0"]
-  }
-
-  inbound_policy  = "DROP"
-  outbound_policy = "ACCEPT"
-
-  linodes = [linode_instance.proxy.id]
+# ======================
+# Cloud-init user_data template
+# ======================
+locals {
+  cloud_init = <<-EOF
+                #cloud-config
+                users:
+                  - name: ansible
+                    gecos: "Automation User"
+                    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+                    groups: sudo
+                    shell: /bin/bash
+                    ssh_authorized_keys:
+                      - ${var.automation_pubkey}
+                packages:
+                  - git
+                  - docker.io
+                runcmd:
+                  - echo "Automation user ready" > /home/deploy/welcome.txt
+                  - systemctl enable docker
+                EOF
 }
 
-# ------------------------
-# Private Firewall
-# ------------------------
-resource "linode_firewall" "private_fw" {
-  label = "fw-private-workloads"
+# ======================
+# EC2 Instances
+# ======================
+resource "aws_instance" "frontend" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.public_subnet.id
+  key_name               = var.ssh_key_name
+  vpc_security_group_ids = [aws_security_group.frontend_sg.id]
+  user_data              = local.cloud_init
+  tags                   = { Name = "mini-saas-frontend" }
+}
 
-  inbound {
-    label    = "allow-ssh-from-proxy"
-    action   = "ACCEPT"
-    protocol = "TCP"
-    ports    = "22"
-    ipv4     = ["192.168.33.250/32"]
-  }
-
-  inbound {
-    label    = "allow-app-from-proxy"
-    action   = "ACCEPT"
-    protocol = "TCP"
-    ports    = "3000"
-    ipv4     = ["192.168.33.250/32"]
-  }
-
-  inbound_policy  = "DROP"
-  outbound_policy = "ACCEPT"
-
-  linodes = [for vm in linode_instance.private : vm.id]
+resource "aws_instance" "backend" {
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.private_subnet.id
+  key_name                    = var.ssh_key_name
+  vpc_security_group_ids      = [aws_security_group.backend_sg.id]
+  associate_public_ip_address = false
+  user_data                   = local.cloud_init
+  tags                        = { Name = "mini-saas-backend" }
 }
