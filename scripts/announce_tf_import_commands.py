@@ -3,21 +3,36 @@
 import json
 import subprocess
 import sys
-
+import os
 
 TERRAFORM_DIR = "terraform"
 
+# ------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------
+
+def require_env(var):
+    if not os.environ.get(var):
+        print(f"[ERROR] Required env var missing: {var}")
+        sys.exit(1)
 
 def tf_output(args):
     cmd = ["terraform", f"-chdir={TERRAFORM_DIR}", "output"] + args
     try:
         return subprocess.check_output(cmd, text=True).strip()
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         print(f"[ERROR] Terraform command failed: {' '.join(cmd)}")
         sys.exit(1)
 
+# ------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------
 
 def main():
+    # Validate AWS credentials (needed for Terraform)
+    require_env("AWS_ACCESS_KEY_ID")
+    require_env("AWS_SECRET_ACCESS_KEY")
+
     # Read outputs
     instance_ids_raw = tf_output(["-json", "instance_ids"])
     proxy_id = tf_output(["-raw", "proxy_id"])
