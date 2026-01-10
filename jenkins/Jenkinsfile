@@ -52,8 +52,8 @@ pipeline {
         // stage('Add Private Nodes to known_hosts') {
         //     steps {
         //         sh 'python3 scripts/add_private_nodes_to_known_hosts.py'
-            }
-        }
+        //     }
+        // }
 
         stage('Announce Terraform Import Commands') {
             steps {  
@@ -89,7 +89,7 @@ pipeline {
         //     }
         // }
     
-
+    }
     post {
         success {
             echo 'Infrastructure provisioned and configured successfully.'
