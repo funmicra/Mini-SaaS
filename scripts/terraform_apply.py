@@ -6,11 +6,9 @@ import sys
 import time
 from pathlib import Path
 import json
-import boto3
+
 
 TERRAFORM_DIR = Path("terraform")
-# ANSIBLE_INVENTORY = Path("ansible/hosts.ini")
-# ANSIBLE_USER = "deploy"  # cloud-init user
 
 # ------------------------------------------------------------------
 # Helpers
@@ -46,25 +44,6 @@ def wait_for_instance(instance_id, timeout=300):
         time.sleep(5)
     print(f"[WARN] Timeout waiting for instance {instance_id}")
 
-# def generate_inventory(frontend_ip, backend_ip):
-#     inventory = [
-#         "[frontend]",
-#         frontend_ip,
-#         "",
-#         "[frontend:vars]",
-#         f"ansible_user={ANSIBLE_USER}",
-#         "",
-#         "[backend]",
-#         backend_ip,
-#         "",
-#         "[backend:vars]",
-#         f"ansible_user={ANSIBLE_USER}",
-#         f"ansible_ssh_common_args=-o ProxyJump={ANSIBLE_USER}@{frontend_ip} -o ForwardAgent=yes -o StrictHostKeyChecking=no",
-#         "",
-#     ]
-#     ANSIBLE_INVENTORY.write_text("\n".join(inventory))
-#     print(f"[INFO] Ansible inventory written to {ANSIBLE_INVENTORY}")
-
 # ------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------
@@ -84,21 +63,6 @@ def main():
     run(["terraform", "apply", "-auto-approve", "tfplan"], cwd=TERRAFORM_DIR)
 
     print("[INFO] Terraform apply completed. Fetching instance info...")
-
-    # # Get frontend/backend IPs & IDs from Terraform outputs
-    # frontend_ip = tf_output("frontend_public_ip")["value"]
-    # backend_ip = tf_output("backend_private_ip")["value"]
-    # frontend_id = tf_output("frontend_instance_id")["value"]
-    # backend_id = tf_output("backend_instance_id")["value"]
-
-    # # Wait for EC2 instances to be running
-    # wait_for_instance(frontend_id)
-    # wait_for_instance(backend_id)
-
-    # # Generate Ansible inventory
-    # generate_inventory(frontend_ip, backend_ip)
-
-    # print("[INFO] Deployment complete. You can now run Ansible playbooks using hosts.ini")
 
 if __name__ == "__main__":
     main()
