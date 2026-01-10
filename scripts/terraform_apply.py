@@ -13,10 +13,11 @@ TERRAFORM_DIR = Path("terraform")
 
 def run(cmd, cwd=None):
     print(f"[INFO] Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, cwd=cwd, check=True, text=True, capture_output=True)
-    print(result.stdout)
-    if result.stderr:
-        print(result.stderr, file=sys.stderr)
+    result = subprocess.run(cmd, cwd=cwd, text=True)
+    if result.returncode != 0:
+        print(f"[ERROR] Command failed: {' '.join(cmd)}")
+        sys.exit(result.returncode)
+
 
 def require_env(var):
     if not os.environ.get(var):
