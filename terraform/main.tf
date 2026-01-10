@@ -3,8 +3,8 @@
 # ======================
 provider "aws" {
   region  = "eu-central-1" # change to your region
-  profile = "deploy"
-}
+} #  profile = "deploy"
+
 
 # ======================
 # Variables
