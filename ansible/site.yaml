@@ -1,4 +1,4 @@
-- hosts: proxy
+- hosts: frontend
   serial: 1
   become: true
   roles:
@@ -6,12 +6,12 @@
     - set_hostname
     - nat
     - nat_firewall
-  tags: proxy
+  tags: frontend
 
-- hosts: private
+- hosts: backend
   become: true
   roles:
     - apt
     - set_hostname
     - nat_firewall
-  tags: private
+  tags: backend
