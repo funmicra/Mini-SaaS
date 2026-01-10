@@ -8,7 +8,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 git(
@@ -27,13 +26,14 @@ pipeline {
                 }
             }
             environment {
-                AWS_ACCESS_KEY_ID     = credentials('aws_access_key_id')     // Jenkins credential ID
-                AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key') // Jenkins credential ID
+                AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+                AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
             }
             steps {
-                sh'python3 scripts/terraform_apply.py'
+                sh 'python3 scripts/terraform_apply.py'
             }
         }
+
 
         stage('Update Dynamic Inventory') {
             steps {
