@@ -44,8 +44,8 @@ pipeline {
 
         stage('Terraform Import Announce') {
             environment {
-                AWS_ACCESS_KEY_ID     = credentials('aws_access_key_id')     // Jenkins Credential ID
-                AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key') // Jenkins Credential ID
+                AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+                AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
             }
             steps {
                 sh 'python3 scripts/announce_tf_import_commands.py'
