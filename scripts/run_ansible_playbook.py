@@ -65,11 +65,11 @@ def main():
         print("[ERROR] Missing ANSIBLE_PRIVATE_KEY or ANSIBLE_USER")
         sys.exit(1)
 
-    proxy_ips = parse_inventory("proxy")
-    private_ips = parse_inventory("private")
+    proxy_ips = parse_inventory("frontend")
+    private_ips = parse_inventory("backend")
 
     if not proxy_ips:
-        print("[ERROR] No proxy defined in inventory")
+        print("[ERROR] No frontend defined in inventory")
         sys.exit(1)
 
     proxy_ip = proxy_ips[0]
