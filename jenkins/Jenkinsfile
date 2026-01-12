@@ -68,17 +68,7 @@ pipeline {
                     sh 'python3 ansible/inventory/dynamic_inventory.py'
                 }
             }
-        }
-
-        stage('Terraform Import Announce') {
-            environment {
-                AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-                AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
-            }
-            steps {
-                sh 'python3 scripts/announce_tf_import_commands.py'
-            }
-        }        
+        } 
         
         stage('Run Ansible Playbooks') {
             steps {
