@@ -4,7 +4,7 @@ import subprocess
 import sys
 import json
 
-TERRAFORM_DIR = "../terraform"
+TERRAFORM_DIR = "terraform"
 SSH_USER = "ansible"
 
 
