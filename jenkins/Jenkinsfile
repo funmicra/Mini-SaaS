@@ -62,7 +62,7 @@ pipeline {
         }
         
 
-        stage('Update Dynamic Inventory') {
+        stage('Create Dynamic Ansible Inventory') {
             when {
                 expression { 
                     // skip if pipeline was terminated
@@ -71,12 +71,12 @@ pipeline {
             }
             steps {
                 script {
-                    sh 'python3 ansible/inventory/dynamic_inventory.py'
+                    sh 'python3 scripts/create_dynamic_inventory.py'
                 }
             }
         } 
         
-        stage('Run Ansible Playbooks') {
+        stage('Configuring with Ansible') {
             when {
                 expression { 
                     // skip if pipeline was terminated
@@ -96,7 +96,7 @@ pipeline {
             }
         }
 
-        stage('Announce SSH Commands') {
+        stage('Announce SSH login Commands') {
             when {
                 expression { 
                     // skip if pipeline was terminated

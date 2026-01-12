@@ -14,11 +14,23 @@ variable "instance_type" {
 }
 
 variable "ssh_key_name" {
-  default = "mini-saas-key" # your imported RSA key
+  default = "mini-saas-key"
 }
 
 variable "automation_pubkey" {
   default = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFX4JO+5+o85gZSKnFY1QfL8XaQRYANL6L/l6PDl4jRs funmicra@Titanas"
+}
+
+variable "backend_count" {
+  type    = number
+  default = 2
+}
+
+locals {
+  # Generate backend IPs starting at .10 in the subnet
+  backend_private_ips = [
+    for i in range(var.backend_count) : cidrhost(aws_subnet.private_subnet.cidr_block, 10 + i)
+  ]
 }
 
 # ======================
@@ -199,12 +211,14 @@ resource "aws_instance" "frontend" {
 }
 
 resource "aws_instance" "backend" {
+  count                       = var.backend_count
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
   subnet_id                   = aws_subnet.private_subnet.id
   key_name                    = var.ssh_key_name
   vpc_security_group_ids      = [aws_security_group.backend_sg.id]
   associate_public_ip_address = false
+  private_ip                  = var.backend_private_ips[count.index]
   user_data                   = local.cloud_init
   tags                        = { Name = "mini-saas-backend" }
 }
@@ -223,53 +237,10 @@ output "frontend_private_ip" {
   description = "Private IP of the frontend EC2"
   value       = aws_instance.frontend.private_ip
 }
-
-output "frontend_instance_id" {
-  description = "EC2 instance ID of frontend"
-  value       = aws_instance.frontend.id
-}
-
-output "frontend_sg_id" {
-  description = "Security group ID of frontend"
-  value       = aws_security_group.frontend_sg.id
-}
-
 # Backend
 output "backend_private_ip" {
   description = "Private IP of the backend EC2"
   value       = aws_instance.backend.private_ip
-}
-
-output "backend_instance_id" {
-  description = "EC2 instance ID of backend"
-  value       = aws_instance.backend.id
-}
-
-output "backend_sg_id" {
-  description = "Security group ID of backend"
-  value       = aws_security_group.backend_sg.id
-}
-
-# Subnets & VPC
-output "public_subnet_id" {
-  description = "ID of the public subnet"
-  value       = aws_subnet.public_subnet.id
-}
-
-output "private_subnet_id" {
-  description = "ID of the private subnet"
-  value       = aws_subnet.private_subnet.id
-}
-
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = aws_vpc.mini_saas_vpc.id
-}
-
-# NAT Gateway
-output "nat_gateway_id" {
-  description = "NAT Gateway ID"
-  value       = aws_nat_gateway.nat_gw.id
 }
 
 output "nat_eip" {
