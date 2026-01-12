@@ -49,7 +49,8 @@ pipeline {
             steps {
                 script {
                     echo "[INFO] [DESTROY] commit detected. Running terraform destroy..."
-                    sh 'terraform -chdir=terraform destroy -auto-approve'
+                    sh 'cd terraform'
+                    sh 'terraform destroy -auto-approve'
 
                     echo "[INFO] Pipeline terminating after Terraform destroy."
                     env.TERMINATE_PIPELINE = 'true'
