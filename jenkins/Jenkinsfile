@@ -52,16 +52,20 @@ pipeline {
                     sh 'terraform -chdir=terraform destroy -auto-approve'
 
                     echo "[INFO] Pipeline terminating after Terraform destroy."
-                    catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
-                        error("[INFO] Stopping pipeline after [DESTROY] commit.")
+                    env.TERMINATE_PIPELINE = 'true'
+                    echo "[INFO] Pipeline will terminate after Terraform destroy."
                     }
                 }
             }
         }
 
-
-
         stage('Update Dynamic Inventory') {
+            when {
+                expression { 
+                    // skip if pipeline was terminated
+                    env.TERMINATE_PIPELINE != 'true' 
+                }
+            }
             steps {
                 script {
                     sh 'python3 ansible/inventory/dynamic_inventory.py'
@@ -70,6 +74,12 @@ pipeline {
         } 
         
         stage('Run Ansible Playbooks') {
+            when {
+                expression { 
+                    // skip if pipeline was terminated
+                    env.TERMINATE_PIPELINE != 'true' 
+                }
+            }
             steps {
                 withCredentials([
                     sshUserPrivateKey(
@@ -84,6 +94,12 @@ pipeline {
         }
 
         stage('Announce SSH Commands') {
+            when {
+                expression { 
+                    // skip if pipeline was terminated
+                    env.TERMINATE_PIPELINE != 'true' 
+                }
+            }
             steps {
                 sh 'python3 scripts/announce_ssh_commands.py'
             }
