@@ -37,7 +37,6 @@ pipeline {
         stage('Terraform Destroy') {
             when {
                 expression {
-                    // Check if any commit contains [DESTROY]
                     currentBuild.changeSets.any { cs ->
                         cs.items.any { it.msg.contains("[DESTROY]") }
                     }
@@ -52,14 +51,14 @@ pipeline {
                     echo "[INFO] [DESTROY] commit detected. Running terraform destroy..."
                     sh 'terraform -chdir=terraform destroy -auto-approve'
 
-                    // Terminate pipeline after destroy
-                    currentBuild.result = 'SUCCESS'
                     echo "[INFO] Pipeline terminating after Terraform destroy."
-                    // Stop the rest of the pipeline
-                    return
+                    catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                        error("[INFO] Stopping pipeline after [DESTROY] commit.")
+                    }
                 }
             }
         }
+
 
 
         stage('Update Dynamic Inventory') {
