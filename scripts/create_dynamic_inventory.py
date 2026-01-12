@@ -11,8 +11,8 @@ import ipaddress
 
 ANSIBLE_USER = "ansible"  # matches cloud-init automation user
 SCRIPT_DIR = Path(__file__).resolve().parent
-TF_DIR = (SCRIPT_DIR / "../../terraform").resolve()
-OUTPUT_FILE = SCRIPT_DIR / "hosts.ini"
+TF_DIR = (SCRIPT_DIR / "../terraform").resolve()
+OUTPUT_FILE = SCRIPT_DIR / "../ansible/inventory/hosts.ini"
 
 # ------------------------------------------------------------------
 # Helpers
@@ -61,25 +61,36 @@ def add_group(inventory_lines, group_name, hosts, vars_dict=None):
 # Main
 # ------------------------------------------------------------------
 
+def ensure_list(value):
+    """Convert a Terraform output to a list of IPs, even if it's a single string."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return value
+    print(f"[ERROR] Unexpected Terraform output type: {type(value)}", file=sys.stderr)
+    sys.exit(1)
+
 def main():
     if not TF_DIR.exists():
         print(f"[ERROR] Terraform directory not found: {TF_DIR}", file=sys.stderr)
         sys.exit(1)
 
     outputs = run_terraform_output()
-    
-    # Identify groups dynamically
+
     inventory = []
 
-    frontend_ips = outputs.get("frontend_ips", {}).get("value", [])
-    backend_ips = outputs.get("backend_ips", {}).get("value", [])
+    # Extract outputs and ensure lists
+    frontend_ips_raw = outputs.get("frontend_public_ip", {}).get("value")
+    backend_ips_raw = outputs.get("backend_private_ip", {}).get("value")
+
+    frontend_ips = [normalize_ip(ip) for ip in ensure_list(frontend_ips_raw)]
+    backend_ips = [normalize_ip(ip) for ip in ensure_list(backend_ips_raw)]
 
     if not frontend_ips:
         print("[ERROR] No frontend IPs found in Terraform output", file=sys.stderr)
         sys.exit(1)
-
-    frontend_ips = [normalize_ip(ip) for ip in frontend_ips]
-    backend_ips = [normalize_ip(ip) for ip in backend_ips]
 
     # Frontend group
     add_group(

@@ -2,12 +2,12 @@
   serial: 1
   become: true
   roles:
-    - apt
-    - docker
+    # - apt
+    # - docker
     - set_hostname
-    - ufw
-    - zerotier
-    - ssh_hardening
+    # - ufw
+    # - zerotier
+    # - ssh_hardening
 
 
   tags: frontend
@@ -15,11 +15,11 @@
 - hosts: backend
   become: true
   roles:
-    - apt
-    - docker
+    # - apt
+    # - docker
     - set_hostname
-    - ufw
-    - ssh_hardening
+    # - ufw
+    # - ssh_hardening
 
     
   tags: backend

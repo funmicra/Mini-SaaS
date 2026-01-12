@@ -218,7 +218,7 @@ resource "aws_instance" "backend" {
   key_name                    = var.ssh_key_name
   vpc_security_group_ids      = [aws_security_group.backend_sg.id]
   associate_public_ip_address = false
-  private_ip                  = var.backend_private_ips[count.index]
+  private_ip                  = local.backend_private_ips[count.index]
   user_data                   = local.cloud_init
   tags                        = { Name = "mini-saas-backend" }
 }
@@ -240,7 +240,7 @@ output "frontend_private_ip" {
 # Backend
 output "backend_private_ip" {
   description = "Private IP of the backend EC2"
-  value       = aws_instance.backend.private_ip
+  value = [for b in aws_instance.backend : b.private_ip]
 }
 
 output "nat_eip" {

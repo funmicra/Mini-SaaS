@@ -64,3 +64,5 @@ ansible/dynamic_inventory.json
 *.ppk
 # Any sensitive credentials files
 *.env
+
+url-shortener
