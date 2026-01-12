@@ -1,0 +1,12 @@
+- name: Create backup directory
+  file:
+    path: /opt/backups
+    state: directory
+    mode: "0755"
+
+- name: Dump PostgreSQL nightly
+  cron:
+    name: "Nightly DB backup"
+    minute: "0"
+    hour: "2"
+    job: "pg_dumpall -U postgres | gzip > /opt/backups/db_$(date +\%F).sql.gz"

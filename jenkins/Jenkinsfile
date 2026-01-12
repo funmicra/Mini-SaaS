@@ -34,7 +34,6 @@ pipeline {
             }
         }
 
-
         stage('Update Dynamic Inventory') {
             steps {
                 script {
@@ -42,29 +41,16 @@ pipeline {
                 }
             }
         }
-        
-        // stage('Add Proxy to known_hosts') {
-        //     steps {
-        //         sh 'python3 scripts/add_proxy_to_known_hosts.py'
-        //     }
-        // }
 
-        // stage('Add Private Nodes to known_hosts') {
-        //     steps {
-        //         sh 'python3 scripts/add_private_nodes_to_known_hosts.py'
-        //     }
-        // }
-
-        // stage('Terraform Import Announce') {
-        //     environment {
-        //         AWS_ACCESS_KEY_ID     = credentials('aws_access_key_id')     // Jenkins Credential ID
-        //         AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key') // Jenkins Credential ID
-        //     }
-        //     steps {
-        //         sh 'python3 scripts/announce_tf_import_commands.py'
-        //     }
-        // }
-        
+        stage('Terraform Import Announce') {
+            environment {
+                AWS_ACCESS_KEY_ID     = credentials('aws_access_key_id')     // Jenkins Credential ID
+                AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key') // Jenkins Credential ID
+            }
+            steps {
+                sh 'python3 scripts/announce_tf_import_commands.py'
+            }
+        }        
         
         stage('Run Ansible Playbooks') {
             steps {
@@ -80,21 +66,13 @@ pipeline {
             }
         }
 
-
         stage('Announce SSH Commands') {
             steps {
                 sh 'python3 scripts/announce_ssh_commands.py'
             }
-        }
-
-        // stage('Clean Workspace') {
-        //     steps {
-        //         echo 'Cleaning Jenkins workspace...'
-        //         deleteDir()
-        //     }
-        // }
-    
+        }    
     }
+
     post {
         success {
             echo 'Infrastructure provisioned and configured successfully.'

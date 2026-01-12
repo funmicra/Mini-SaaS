@@ -1,0 +1,35 @@
+- name: Backup sshd_config
+  copy:
+    src: /etc/ssh/sshd_config
+    dest: /etc/ssh/sshd_config.bak
+    remote_src: yes
+  changed_when: false
+
+- name: Disable root login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+
+- name: Disable password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+
+- name: Disable challenge response auth
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?ChallengeResponseAuthentication'
+    line: 'ChallengeResponseAuthentication no'
+
+- name: Enable public key authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PubkeyAuthentication'
+    line: 'PubkeyAuthentication yes'
+
+- name: Restart SSH
+  service:
+    name: ssh
+    state: restarted

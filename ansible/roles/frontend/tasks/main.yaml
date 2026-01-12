@@ -1,0 +1,15 @@
+- name: Pull frontend image
+  docker_image:
+    name: my_saas_frontend
+    source: pull
+
+- name: Run frontend container
+  docker_container:
+    name: frontend
+    image: my_saas_frontend
+    state: started
+    restart_policy: always
+    published_ports:
+      - "3000:3000"
+
+

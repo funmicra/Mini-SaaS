@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import json
 import subprocess
 import sys
 import os
@@ -18,16 +17,17 @@ def require_env(var):
         sys.exit(1)
     return value
 
-def tf_output(args):
+
+def tf_output(name):
     """
-    Run terraform output with AWS credentials from environment.
+    Read a raw terraform output value.
     """
     env = os.environ.copy()
-    cmd = ["terraform", f"-chdir={TERRAFORM_DIR}", "output"] + args
+    cmd = ["terraform", f"-chdir={TERRAFORM_DIR}", "output", "-raw", name]
     try:
         return subprocess.check_output(cmd, text=True, env=env).strip()
     except subprocess.CalledProcessError:
-        print(f"[ERROR] Terraform command failed: {' '.join(cmd)}")
+        print(f"[ERROR] Failed to read terraform output: {name}")
         sys.exit(1)
 
 # ------------------------------------------------------------------
@@ -35,30 +35,31 @@ def tf_output(args):
 # ------------------------------------------------------------------
 
 def main():
-    # Validate Jenkins-injected AWS credentials
+    # Jenkins / CI guardrails
     aws_access_key = require_env("AWS_ACCESS_KEY_ID")
-    aws_secret_key = require_env("AWS_SECRET_ACCESS_KEY")
+    require_env("AWS_SECRET_ACCESS_KEY")
 
-    print(f"[INFO] Using AWS_ACCESS_KEY_ID={aws_access_key[:4]}*** (masked)")
+    print(f"[INFO] AWS credentials detected ({aws_access_key[:4]}*** masked)")
 
-    # Read Terraform outputs
-    instance_ids_raw = tf_output(["-json", "instance_ids"])
-    proxy_id = tf_output(["-raw", "proxy_id"])
-    vpc_id = tf_output(["-raw", "vpc_id"])
-
-    instance_ids = json.loads(instance_ids_raw)
+    # Terraform outputs
+    frontend_instance_id = tf_output("frontend_instance_id")
+    backend_instance_id = tf_output("backend_instance_id")
+    nat_gateway_id = tf_output("nat_gateway_id")
+    vpc_id = tf_output("vpc_id")
+    public_subnet_id = tf_output("public_subnet_id")
+    private_subnet_id = tf_output("private_subnet_id")
 
     print("\n# ---- Terraform import commands ----\n")
 
-    # Private instances
-    for idx, instance_id in enumerate(instance_ids):
-        print(f'terraform import "linode_instance.private[{idx}]" {instance_id}')
+    # EC2 instances
+    print(f'terraform import aws_instance.frontend {frontend_instance_id}')
+    print(f'terraform import aws_instance.backend {backend_instance_id}')
 
-    # Proxy
-    print(f'\nterraform import "linode_instance.proxy" {proxy_id}')
-
-    # VPC
-    print(f'terraform import "linode_vpc.private" {vpc_id}')
+    # Networking
+    print(f'\nterraform import aws_nat_gateway.main {nat_gateway_id}')
+    print(f'terraform import aws_vpc.main {vpc_id}')
+    print(f'terraform import aws_subnet.public {public_subnet_id}')
+    print(f'terraform import aws_subnet.private {private_subnet_id}')
 
     print("\n# ---- End ----\n")
 

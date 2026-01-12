@@ -1,0 +1,21 @@
+- name: Install PostgreSQL
+  apt:
+    name: postgresql
+    state: present
+
+- name: Ensure PostgreSQL service is running
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Install Redis
+  apt:
+    name: redis-server
+    state: present
+
+- name: Ensure Redis service is running
+  service:
+    name: redis-server
+    state: started
+    enabled: yes

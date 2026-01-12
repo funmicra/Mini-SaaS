@@ -22,9 +22,8 @@ Target Architecture
 ---
 
 
-# Linode Layout (Realistic, Resume-Friendly)
-
-1. Linode 1 – Edge / App Node
+# EC2 Layout
+1. VM1 – Edge / App Node
 
     - Nginx
 
@@ -32,7 +31,7 @@ Target Architecture
 
     - Backend container
 
-2. Linode 2 – Data Node
+2. VM2 – Data Node
 
     - PostgreSQL
 

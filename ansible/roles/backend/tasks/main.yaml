@@ -1,0 +1,13 @@
+- name: Pull backend image
+  docker_image:
+    name: my_saas_backend
+    source: pull
+
+- name: Run backend container
+  docker_container:
+    name: backend
+    image: my_saas_backend
+    state: started
+    restart_policy: always
+    published_ports:
+      - "8000:8000"

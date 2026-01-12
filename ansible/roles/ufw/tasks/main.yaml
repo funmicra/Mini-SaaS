@@ -1,0 +1,22 @@
+- name: Ensure UFW is enabled
+  community.general.ufw:
+    state: enabled
+
+- name: Allow SSH (any source, jump enforced in Ansible)
+  community.general.ufw:
+    rule: allow
+    port: 22
+    proto: tcp
+    state: enabled
+
+- name: Allow HTTP
+  community.general.ufw:
+    rule: allow
+    port: 80
+    proto: tcp
+
+- name: Allow HTTPS
+  community.general.ufw:
+    rule: allow
+    port: 443
+    proto: tcp

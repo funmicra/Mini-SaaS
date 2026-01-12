@@ -2,16 +2,24 @@
   serial: 1
   become: true
   roles:
-    - common
+    - apt
+    - docker
     - set_hostname
-    - nat
-    - nat_firewall
+    - ufw
+    - zerotier
+    - ssh_hardening
+
+
   tags: frontend
 
 - hosts: backend
   become: true
   roles:
     - apt
+    - docker
     - set_hostname
-    - nat_firewall
+    - ufw
+    - ssh_hardening
+
+    
   tags: backend

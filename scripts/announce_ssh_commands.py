@@ -1,35 +1,36 @@
 #!/usr/bin/env python3
 
-import json
 import subprocess
 import sys
 
 TERRAFORM_DIR = "terraform"
-SSH_USER = "funmicra"
+SSH_USER = "ansible"
 
 
-def tf_output(args):
-    cmd = ["terraform", f"-chdir={TERRAFORM_DIR}", "output"] + args
+def tf_output(name):
+    cmd = ["terraform", f"-chdir={TERRAFORM_DIR}", "output", "-raw", name]
     try:
         return subprocess.check_output(cmd, text=True).strip()
     except subprocess.CalledProcessError:
-        print(f"[ERROR] Failed to run: {' '.join(cmd)}")
+        print(f"[ERROR] Failed to read terraform output: {name}")
         sys.exit(1)
 
 
 def main():
-    # Read Terraform outputs
-    proxy_ip = tf_output(["-raw", "proxy_public_ip"])
-    private_ips_raw = tf_output(["-json", "private_ips"])
+    frontend_public_ip = tf_output("frontend_public_ip")
+    frontend_private_ip = tf_output("frontend_private_ip")
+    backend_private_ip = tf_output("backend_private_ip")
 
-    private_ips = json.loads(private_ips_raw)
+    print("\nSSH access paths (validated against Terraform state):\n")
 
-    print("\nAccess your private Linodes using the following SSH commands:\n")
+    print("# Frontend (direct access)")
+    print(f"ssh {SSH_USER}@{frontend_public_ip}\n")
 
-    for idx, ip in enumerate(private_ips):
-        print(f"ssh -J {SSH_USER}@{proxy_ip} {SSH_USER}@{ip}   # private-{idx}")
-
-    print("")
+    print("# Backend (via frontend jump host)")
+    print(
+        f"ssh -J {SSH_USER}@{frontend_public_ip} "
+        f"{SSH_USER}@{backend_private_ip}\n"
+    )
 
 
 if __name__ == "__main__":

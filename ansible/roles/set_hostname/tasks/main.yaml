@@ -2,9 +2,9 @@
 - name: Determine hostname dynamically
   set_fact:
     custom_hostname: "{{ 
-      ('proxy' if 'proxy' in group_names 
-       else 'private-' + groups['private'].index(inventory_hostname)|string 
-       if 'private' in group_names 
+      ('frontend' if 'frontend' in group_names 
+       else 'backend-' + groups['backend'].index(inventory_hostname)|string 
+       if 'backend' in group_names 
        else inventory_hostname_short) 
       | trim 
     }}"
