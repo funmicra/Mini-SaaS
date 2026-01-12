@@ -71,6 +71,23 @@ pipeline {
                 sh 'python3 scripts/announce_ssh_commands.py'
             }
         }    
+
+        stage('Terraform Destroy') {
+            when {
+                expression {
+                    currentBuild.changeSets.any { cs ->
+                        cs.items.any { it.msg.contains("[DESTROY]") }
+                    }
+                }
+            }
+            environment {
+                AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+                AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+            }
+            steps {
+                sh 'terraform -chdir=terraform destroy -auto-approve'
+            }
+        }
     }
 
     post {
